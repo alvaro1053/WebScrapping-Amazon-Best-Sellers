@@ -9,7 +9,7 @@ fichero = urllib.request.urlopen("https://www.amazon.es/gp/bestsellers/electroni
 documento = BeautifulSoup(fichero, 'lxml')
 l = documento.find_all("li", class_=["zg-item-immersion"])
 
-
+'''
 #extraer titulo
 for e in l:
     if e != None:
@@ -24,15 +24,18 @@ for e in l:
         print(e.span.div.find_all('span')[3].a['href'])
     else:
         print("No se ha encontrado nada")
-
+'''
 #extraer puntuacion
 for e in l:
     if e != None:
-        if(e.span.div.find_all('span')[3].find_all('div')[2].a.i != None):
-            print(e.span.div.find_all('span')[3].find_all('div')[2].a.i.span.contents[0])
+        try:
+            if(e.span.div.find_all('span')[3].find_all('div')[2].a.i != None):  
+                print(e.span.div.find_all('span')[3].find_all('div')[2].a.i.span.contents[0])
+        except IndexError:
+            print("No tiene precio")
     else:
         print("No se ha encontrado nada")
-
+'''
 #extraer precio
 for e in l:
     if e != None:
@@ -42,3 +45,4 @@ for e in l:
             print("No tiene precio")
     else:
         print("No se ha encontrado nada")
+'''

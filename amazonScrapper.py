@@ -71,8 +71,11 @@ def extraer_enlace(e):
    
 def extraer_puntuacion(e):
     if e != None:
-        if(e.span.div.find_all('span')[3].find_all('div')[2].a.i != None):
-            return e.span.div.find_all('span')[3].find_all('div')[2].a.i.span.contents[0]
+        try:
+            if(e.span.div.find_all('span')[3].find_all('div')[2].a.i != None):  
+                return e.span.div.find_all('span')[3].find_all('div')[2].a.i.span.contents[0]
+        except IndexError:
+            return ""
     else:
         return ""
 
