@@ -11,3 +11,4 @@ Then you only need to load the database and choose the option you want:
 ## Technologies used
 * BeautifulSoup: used for web srapping
 * Tkinter: used for visual interface for python
+* SQLite: used for data storage
