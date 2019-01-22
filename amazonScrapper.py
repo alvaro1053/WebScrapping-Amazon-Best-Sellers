@@ -5,16 +5,20 @@ Created on 22 oct. 2018
 '''
 
 import urllib.request, re
-from tkinter import *
-from tkinter import messagebox
 import sqlite3
 import os
+import urllib
+import PIL.Image 
+import PIL.ImageTk
+import tkinter as tk
 from tkinter.constants import TOP
 from bs4 import BeautifulSoup
+from tkinter import *
+from tkinter import messagebox
 
 def seleccionar_paginas():
     conjunto = set()
-    for i in range (1,3):#coge las 2 paginas (top 100 articulos)
+    for i in range (1,2):#coge las 2 paginas (top 100 articulos)
         p = 'https://www.amazon.es/gp/bestsellers/electronics/ref=zg_bs_electronics_home_all&pg='+str(i)
         conjunto.add(p)
     return conjunto
@@ -35,25 +39,33 @@ def cargar_db():
        TITULO       TEXT NOT NULL,
        ENLACE          TEXT    NOT NULL,
        PUNTUACION       TEXT    ,
-       PRECIO       DOUBLE    );''')
+       PRECIO       DOUBLE,
+       FOTO         TEXT NOT NULL);''')
     paginas = seleccionar_paginas()
     for pagina in paginas:
         documento = procesar_pagina(pagina)
         for e in documento:
+            foto = extraer_foto(e)
             titulo = extraer_titulo(e)
             enlace = extraer_enlace(e)
             puntuacion = extraer_puntuacion(e)
             precio = extraer_precio(e)
 
-            insertar_tupla_bd(conn, titulo, enlace, puntuacion, precio)
+            insertar_tupla_bd(conn, titulo, enlace, puntuacion, precio, foto)
    
     cursor = conn.execute("SELECT COUNT(*) FROM AMAZON")
     messagebox.showinfo( "Base Datos", "Base de datos creada correctamente \nHay " + str(cursor.fetchone()[0]) + " artículos")
     cerrar_bd(conn)
 
-def insertar_tupla_bd(conn, titulo, enlace, puntuacion, precio):
-    conn.execute("""INSERT INTO AMAZON (TITULO, ENLACE, PUNTUACION, PRECIO) VALUES (?,?,?,?)""",(titulo, enlace, puntuacion, precio))
+def insertar_tupla_bd(conn, titulo, enlace, puntuacion, precio, foto):
+    conn.execute("""INSERT INTO AMAZON (TITULO, ENLACE, PUNTUACION, PRECIO, FOTO) VALUES (?,?,?,?,?)""",(titulo, enlace, puntuacion, precio, foto))
     conn.commit()
+
+def extraer_foto(e):
+    if e != None:
+        return e.span.div.find_all('span')[3].a.span.div.img['src']
+    else:
+        return ""
 
 
 def extraer_titulo(e):
@@ -96,7 +108,7 @@ def cerrar_bd(conn):
    
 def mostrar_db():
     conn = sqlite3.connect('amazon_db')
-    cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON""")
+    cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON""")
     mostrar_cursor(cursor)
     cerrar_bd(conn)
     
@@ -110,9 +122,39 @@ def mostrar_cursor(cursor):
         lb.insert(END, row[1])
         lb.insert(END, row[2])
         lb.insert(END, row[3])
+        lb.insert(END, row[4])
+        '''
+        urllib.request.urlretrieve(row[4], 'image.jpg')
+        image = PIL.Image.open('image.jpg')
+        photo = PIL.ImageTk.PhotoImage(image)
+        label = Label(v, image = photo)
+        label.image = photo
+        label.pack()
+        '''
         lb.insert(END, '')
     lb.pack(side=LEFT, fill=BOTH)
     sc.config(command = lb.yview)
+
+'''
+    root = tk.Tk()
+    for idx, row in enumerate(cursor):
+        lb = tk.Listbox(root, width=100)
+        lb.insert(END, row[0])
+        lb.grid(row=idx, column = 0)
+
+
+        urllib.request.urlretrieve(row[4], 'image.jpg')
+        image = PIL.Image.open('image.jpg')
+        photo = PIL.ImageTk.PhotoImage(image, master=root)
+        #print(row[4])
+        print(photo)
+
+        label = tk.Label(root, image = photo ) 
+        #label = Label(v, image = photo)
+        label.image = photo
+        label.grid(row = idx, column = 1)
+    root.mainloop()
+'''
 
 
 def buscar_bd():
@@ -130,7 +172,7 @@ def cargar_titulo_bd():
     def listar_busqueda_titulo(event):
         conn = sqlite3.connect('amazon_db')
         s = "%"+en.get()+"%"
-        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON WHERE TITULO LIKE ?""", (s,))
+        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON WHERE TITULO LIKE ?""", (s,))
         mostrar_cursor(cursor)
         cerrar_bd(conn)
 
@@ -145,7 +187,7 @@ def cargar_puntuacion_bd():
     def listar_busqueda_puntuacion(event):
         conn = sqlite3.connect('amazon_db')
         s = "%"+en.get()+"%"
-        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON WHERE PUNTUACION LIKE ?""", (s,))
+        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON WHERE PUNTUACION LIKE ?""", (s,))
         mostrar_cursor(cursor)
         cerrar_bd(conn)
 
@@ -160,7 +202,7 @@ def cargar_precio_bd():
     def listar_busqueda_precio(event):
         conn = sqlite3.connect('amazon_db')
         s = "%"+en.get()+"%"
-        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON WHERE PRECIO LIKE ?""", (s,))
+        cursor = conn.execute("""SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON WHERE PRECIO LIKE ?""", (s,))
         mostrar_cursor(cursor)
         cerrar_bd(conn)
 
@@ -184,19 +226,19 @@ def estadisticas_bd():
 
 def estadisticas_mejores():
     conn = sqlite3.connect('amazon_db')
-    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON ORDER BY PUNTUACION DESC LIMIT 20;')
+    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON ORDER BY PUNTUACION DESC LIMIT 20;')
     mostrar_estadisticas(cursor)
     cerrar_bd(conn)
 
 def estadisticas_baratos(): 
     conn = sqlite3.connect('amazon_db')
-    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON ORDER BY PRECIO ASC LIMIT 20;')
+    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON ORDER BY PRECIO ASC LIMIT 20;')
     mostrar_estadisticas(cursor)
     cerrar_bd(conn)
 
 def estadisticas_caros(): 
     conn = sqlite3.connect('amazon_db')
-    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO FROM AMAZON ORDER BY PRECIO DESC LIMIT 20;')
+    cursor = conn.execute('SELECT TITULO, ENLACE, PUNTUACION, PRECIO, FOTO FROM AMAZON ORDER BY PRECIO DESC LIMIT 20;')
     mostrar_estadisticas(cursor)
     cerrar_bd(conn)
 
@@ -210,6 +252,7 @@ def mostrar_estadisticas(cursor):
         lb.insert(END, row[1])
         lb.insert(END, row[2])
         lb.insert(END, row[3])
+        lb.insert(END, row[4])
         lb.insert(END, '')
     lb.pack(side=LEFT, fill=BOTH)
     sc.config(command = lb.yview)
